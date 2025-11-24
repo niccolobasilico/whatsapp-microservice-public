@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Media Gallery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #111b21;
+            margin-bottom: 10px;
+        }
+        .stats {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .stat-item {
+            display: inline-block;
+            margin-right: 30px;
+            padding: 10px 0;
+        }
+        .stat-label {
+            color: #667781;
+            font-size: 14px;
+        }
+        .stat-value {
+            color: #111b21;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .filters {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .filter-btn {
+            background: #f0f2f5;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin-right: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover {
+            background: #e5e7eb;
+        }
+        .filter-btn.active {
+            background: #00a884;
+            color: white;
+        }
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        .media-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        .media-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .media-preview {
+            width: 100%;
+            height: 200px;
+            background: #f0f2f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 64px;
+        }
+        .media-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .media-info {
+            padding: 15px;
+        }
+        .media-type {
+            display: inline-block;
+            background: #e5e7eb;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .media-name {
+            font-size: 14px;
+            color: #111b21;
+            margin-bottom: 5px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .media-meta {
+            font-size: 12px;
+            color: #667781;
+        }
+        .media-actions {
+            padding: 0 15px 15px;
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: opacity 0.2s;
+        }
+        .btn:hover {
+            opacity: 0.8;
+        }
+        .btn-primary {
+            background: #00a884;
+            color: white;
+        }
+        .btn-secondary {
+            background: #f0f2f5;
+            color: #111b21;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667781;
+        }
+        .type-image { background: #dcf8c6; color: #075e54; }
+        .type-video { background: #ffe4e4; color: #dc2626; }
+        .type-audio { background: #e0e7ff; color: #4338ca; }
+        .type-document { background: #fef3c7; color: #92400e; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 WhatsApp Media Gallery</h1>
+
+        <div class="stats" id="stats">
+            <div class="loading">Caricamento statistiche...</div>
+        </div>
+
+        <div class="filters">
+            <button class="filter-btn active" data-filter="all">Tutti</button>
+            <button class="filter-btn" data-filter="image">📷 Foto</button>
+            <button class="filter-btn" data-filter="video">🎥 Video</button>
+            <button class="filter-btn" data-filter="audio">🎤 Audio</button>
+            <button class="filter-btn" data-filter="document">📄 Documenti</button>
+            <button class="filter-btn" data-filter="received">📥 Ricevuti</button>
+            <button class="filter-btn" data-filter="sent">📤 Inviati</button>
+        </div>
+
+        <div class="media-grid" id="mediaGrid">
+            <div class="loading">Caricamento media...</div>
+        </div>
+    </div>
+
+    <script>
+        let allMedia = [];
+        let currentFilter = 'all';
+
+        // Load stats
+        async function loadStats() {
+            try {
+                const response = await fetch('/media/stats');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                if (!data.stats || data.stats.length === 0) {
+                    document.getElementById('stats').innerHTML = '<div class="stat-item">Nessun media disponibile</div>';
+                    return;
+                }
+
+                const statsHtml = data.stats.map(stat => `
+                    <div class="stat-item">
+                        <div class="stat-label">${getTypeLabel(stat.type)}</div>
+                        <div class="stat-value">${stat.count}</div>
+                        <div class="stat-label">${stat.totalSize}</div>
+                    </div>
+                `).join('');
+
+                document.getElementById('stats').innerHTML = statsHtml;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                document.getElementById('stats').innerHTML = '<div class="stat-item">Errore nel caricamento</div>';
+            }
+        }
+
+        // Load media
+        async function loadMedia() {
+            try {
+                const response = await fetch('/media');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                allMedia = data.media || [];
+                renderMedia();
+            } catch (error) {
+                console.error('Error loading media:', error);
+                document.getElementById('mediaGrid').innerHTML = '<div class="loading">Errore nel caricamento dei media</div>';
+            }
+        }
+
+        async function getFileUrl(filePath, storageMode) {
+            if (storageMode === 'supabase') {
+                // For Supabase Storage, construct public URL
+                const supabaseUrl = window.location.origin.includes('railway')
+                    ? await fetch('/api/config').then(r => r.json()).then(d => d.supabaseUrl)
+                    : 'http://localhost:3000'; // Fallback
+                return `/files/${filePath}`;
+            } else {
+                // Local filesystem
+                return `/files/${filePath.replace(/\\/g, '/')}`;
+            }
+        }
+
+        function renderMedia() {
+            if (!allMedia || allMedia.length === 0) {
+                document.getElementById('mediaGrid').innerHTML = '<div class="loading">Nessun media disponibile</div>';
+                return;
+            }
+
+            const filtered = allMedia.filter(media => {
+                if (currentFilter === 'all') return true;
+                if (currentFilter === 'received') return !media.fromMe;
+                if (currentFilter === 'sent') return media.fromMe;
+                return media.mediaType === currentFilter;
+            });
+
+            if (filtered.length === 0) {
+                document.getElementById('mediaGrid').innerHTML = '<div class="loading">Nessun media trovato per questo filtro</div>';
+                return;
+            }
+
+            const html = filtered.map(media => {
+                const isImage = media.mediaType === 'image';
+                // Use download endpoint for both local and cloud
+                const fileUrl = `/media/download/${media.id}`;
+                const downloadUrl = fileUrl;
+
+                return `
+                    <div class="media-card">
+                        <div class="media-preview">
+                            ${isImage
+                                ? `<img src="${fileUrl}" alt="${media.fileName}" loading="lazy" onerror="this.parentElement.innerHTML='<span>${media.emoji}</span>'">`
+                                : `<span>${media.emoji}</span>`
+                            }
+                        </div>
+                        <div class="media-info">
+                            <span class="media-type type-${media.mediaType}">${getTypeLabel(media.mediaType)}</span>
+                            <div class="media-name" title="${media.fileName}">${media.fileName || 'Unnamed'}</div>
+                            <div class="media-meta">
+                                ${formatBytes(media.fileSize)} • ${media.fromMe ? '📤 Inviato' : '📥 Ricevuto'}
+                            </div>
+                            <div class="media-meta">
+                                ${new Date(media.created_at).toLocaleString('it-IT')}
+                            </div>
+                        </div>
+                        <div class="media-actions">
+                            ${isImage
+                                ? `<button class="btn btn-primary" onclick="window.open('${fileUrl}', '_blank')">Apri</button>`
+                                : `<button class="btn btn-primary" onclick="window.open('${fileUrl}', '_blank')">Visualizza</button>`
+                            }
+                            <button class="btn btn-secondary" onclick="window.location.href='${downloadUrl}'">Download</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('mediaGrid').innerHTML = html;
+        }
+
+        function getTypeLabel(type) {
+            const labels = {
+                image: '📷 Foto',
+                video: '🎥 Video',
+                audio: '🎤 Audio',
+                document: '📄 Documento'
+            };
+            return labels[type] || type;
+        }
+
+        function formatBytes(bytes) {
+            if (!bytes) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                renderMedia();
+            });
+        });
+
+        // Initial load
+        loadStats();
+        loadMedia();
+
+        // Reload every 30 seconds
+        setInterval(() => {
+            loadStats();
+            loadMedia();
+        }, 30000);
+    </script>
+</body>
+</html>
