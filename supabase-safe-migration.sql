@@ -194,7 +194,7 @@ INSERT INTO tenants (tenant_id, name, api_key, webhook_url, allowed_origins, rat
 VALUES (
   'saas_crm',
   'CRM Application',
-  'sk_live_crm_abc123xyz789',
+  'YOUR API',
   'https://my-crm.com/api/webhooks/whatsapp',
   ARRAY['https://my-crm.com', 'https://app.my-crm.com', 'http://localhost:3000'],
   30
@@ -219,7 +219,7 @@ INSERT INTO tenants (tenant_id, name, api_key, webhook_url, allowed_origins, rat
 VALUES (
   'saas_ecommerce',
   'E-commerce Platform',
-  'sk_live_ecom_def456uvw012',
+  'YOUR API',
   'https://my-shop.com/api/webhooks/whatsapp',
   ARRAY['https://my-shop.com', 'https://admin.my-shop.com', 'http://localhost:3000'],
   50
